@@ -10,7 +10,7 @@ SRC=$(wildcard $(_SRC)/*.c)
 _OBJ=src/OBJ
 OBJ=$(patsubst $(_SRC)/%.c, $(_OBJ)/%.o, $(SRC))
 # Output Program
-OUT=CTack
+OUT=main
 
 all: $(OUT)
 
