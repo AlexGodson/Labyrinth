@@ -21,7 +21,7 @@ $(_OBJ)/%.o: $(_SRC)/%.c
 	$(CC) $(CFLAGS) -c $< -o $@ $(libs)
 
 run: all
-	./$(OUT)
+	./$(OUT) /home/alexg/Code
 
 clear:
 	rm $(OBJ)*

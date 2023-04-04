@@ -14,6 +14,9 @@
 #include <sys/types.h>
 #include <dirent.h>
 
+int LR_setup_term(struct termios *term);
+void LR_cleanup_term(struct termios *term);
+
 int main(int argc, char **argv) {
     int line = 0;
     if (argc != 2) {
@@ -22,26 +25,12 @@ int main(int argc, char **argv) {
         exit(1);
     }
 
-    // Checking the program is being run within a valid terminal
-    if (!isatty(STDIN_FILENO) || !isatty(STDOUT_FILENO)) {
-        fprintf(stderr, "ERROR: Please run the editor in the terminal!\n(%d): %s", errno, strerror(errno));
-        exit(1);
-    }
+    struct termios term;
 
-    struct termios terminal = {0};
+    if (!LR_setup_term(&term)) return_defer();
 
-    if (tcgetattr(STDIN_FILENO, &terminal)) {
-        fprintf(stderr, "ERROR: Could not get terminal attributes\n(%d): %s", errno, strerror(errno));
-        return_defer();
-    }
-
-    terminal.c_lflag &= ~ECHO;
-    terminal.c_lflag &= ~ICANON;
-
-    if (tcsetattr(0, 0, &terminal)) {
-        fprintf(stderr, "ERROR: could not update the state of the terminal: (%d): %s\n", errno, strerror(errno));
-        return_defer();
-    }
+    // Setup Errors Checked, Program starting
+    puts("Welcome to the Labyrinth \nGoodluck on Your Journey\n");
 
     while (1) {
         char seq[32];
@@ -62,27 +51,51 @@ int main(int argc, char **argv) {
         printf("\"\n");
     }
 
-    puts("Welcome to the Labyrinth \nGoodluck on Your Journey\n");
-
     DIR *derp = opendir(*(argv+1));
 
     struct dirent *D = readdir(derp);
 
     while (D) {
-        printf("%s/%s\n", *(argv+1), D->d_name);
+        printf("%s\n", D->d_name);
         D = readdir(derp);
     }
 
-    terminal.c_lflag |= ECHO;
-    terminal.c_lflag |= ICANON;
-    tcsetattr(STDIN_FILENO, 0, &terminal);
+    LR_cleanup_term(&term);
 
     return 0;
 
 defer:
-    printf("ERROR: __LINE__(%d)", line);
-    printf("\033[2J");
-    terminal.c_lflag |= ECHO;
-    terminal.c_lflag |= ICANON;
-    tcsetattr(STDIN_FILENO, 0, &terminal);
+    printf("ERROR: __LINE__(%d)\n", line);
+    LR_cleanup_term(&term);
+    return 1;
+}
+
+int LR_setup_term(struct termios *term) {
+    if (!isatty(STDIN_FILENO) || !isatty(STDOUT_FILENO)) {
+        fprintf(stderr, "ERROR: Please run Labyrinth in a Terminal\n");
+    }
+
+    if (tcgetattr(STDIN_FILENO, term)) {
+        fprintf(stderr, "ERROR: Could not get terminal attributes\n(%d): %s", __LINE__, strerror(errno));
+        return 0;
+    }
+
+    term->c_lflag &= ~ECHO;
+    term->c_lflag &= ~ICANON;
+
+    if (tcsetattr(0, 0, term)) {
+        fprintf(stderr, "ERROR: could not update the state of the terminal: (%d): %s\n", __LINE__, strerror(errno));
+        return 0;
+    }
+
+    return 1;
+}
+
+void LR_cleanup_term(struct termios *term) {
+    term->c_lflag |= ECHO;
+    term->c_lflag |= ICANON;
+    if (tcsetattr(STDIN_FILENO, 0, term)) {
+        fprintf(stderr, "FATAL ERROR: COULD NOT RESTORE TERMINAL\nTHE WALLS ARE CAVING IN\n(%d): %s\n", __LINE__, strerror(errno));
+        exit(1);
+    }
 }
